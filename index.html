@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 GAME RENTAL 🎮</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* =====================================================
+           🎨 BASIC SETUP - DON'T CHANGE THESE
+           ===================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #container {
+            width: 512px;
+            height: 512px;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;  /* ← Allow content to overflow when game is playing */
+        }
+        
+        /* =====================================================
+           🎨 COLORS & BACKGROUND - CUSTOMIZE HERE!
+           ===================================================== */
+        body {
+            /* Main background gradient - change these colors! */
+            background: linear-gradient(135deg, #1a0033 0%, #0d1b2a 50%, #000814 100%);
+            /* Colors explained:
+               #1a0033 = deep purple (top left)
+               #0d1b2a = dark blue (middle)
+               #000814 = nearly black (bottom right) */
+        }
+        
+        /* =====================================================
+           📺 VHS EFFECTS - CUSTOMIZE INTENSITY
+           ===================================================== */
+        /* VHS SCANLINES - STATIC ONLY */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15) 0px,  /* ← Scanline darkness (0.15 = 15% dark) */
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 0, 0, 0.15) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+            animation: flicker 0.15s infinite;  /* ← Flicker speed */
+        }
+        
+        /* REMOVED VHS TRACKING NOISE - was causing moving gradient */
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 0.97; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes pulse-neon {
+            0%, 100% { text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff; }
+            50% { text-shadow: 0 0 20px #ff00ff, 0 0 30px #ff00ff, 0 0 40px #ff00ff, 0 0 50px #ff00ff; }
+        }
+        
+        @keyframes slide-in {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* =====================================================
+           📝 HEADER TEXT - CUSTOMIZE TITLE & COLORS
+           ===================================================== */
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.6);  /* ← Header background darkness */
+            border: 3px solid;
+            border-image: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff) 1;  /* ← Border gradient colors */
+            position: relative;
+            flex-shrink: 0;  /* ← Don't shrink the header */
+        }
+        
+        .header h1 {
+            font-size: 16px;  /* ← Was 14px */
+            background: linear-gradient(90deg, #ff00ff, #00ffff, #ffff00, #ff00ff);  /* ← Title colors */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+            animation: pulse-neon 2s infinite;
+            filter: drop-shadow(0 0 8px #ff00ff);
+        }
+        
+        .header p {
+            font-size: 7px;  /* ← Was 6px */
+            color: #00ffff;  /* ← Subtitle color */
+            margin-top: 8px;
+            text-shadow: 0 0 5px #00ffff;
+        }
+        
+        /* =====================================================
+           🎮 SYSTEM BOXES - CUSTOMIZE COLORS & HOVER EFFECTS
+           ===================================================== */
+        #system-select {
+            display: block;
+            flex: 1;  /* ← Grow to fill remaining space */
+            overflow: hidden;  /* ← Contain the scrollable grid */
+        }
+        
+        #system-select.hidden {
+            display: none;
+        }
+        
+        .systems-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);  /* ← 3 columns */
+            grid-auto-rows: min-content;  /* ← Rows fit content, no overlap */
+            gap: 10px;  /* ← Space between system boxes */
+            height: 100%;  /* ← Fill parent (system-select) */
+            overflow-y: auto;  /* ← Scrollable */
+            padding-right: 5px;
+            align-content: start;  /* ← Start from top, don't stretch */
+        }
+        
+        /* Scrollbar for systems grid */
+        .systems-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .systems-grid::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .systems-grid::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #ff00ff, #00ffff);
+            border-radius: 4px;
+        }
+        
+        .system-box {
+            aspect-ratio: 1;
+            background: rgba(0, 0, 0, 0.7);  /* ← Box background darkness */
+            border: 2px solid #333;  /* ← Default border color */
+            padding: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+            animation: slide-in 0.4s ease-out backwards;
+        }
+        
+        /* Stagger animation delays for each box */
+        .system-box:nth-child(1) { animation-delay: 0.1s; }
+        .system-box:nth-child(2) { animation-delay: 0.15s; }
+        .system-box:nth-child(3) { animation-delay: 0.2s; }
+        .system-box:nth-child(4) { animation-delay: 0.25s; }
+        .system-box:nth-child(5) { animation-delay: 0.3s; }
+        .system-box:nth-child(6) { animation-delay: 0.35s; }
+        .system-box:nth-child(7) { animation-delay: 0.4s; }
+        
+        /* Shine effect on hover */
+        .system-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .system-box:hover {
+            border-color: #ff00ff;  /* ← Hover border color */
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.8);  /* ← Brighter hover glow */
+            /* Removed transform: scale - box only glows, doesn't resize */
+        }
+        
+        .system-box:hover::before {
+            left: 100%;
+        }
+        
+        .system-box.selected {
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+        }
+        
+        .system-icon {
+            font-size: 28px;  /* ← Icon size */
+            text-align: center;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+        
+        .system-name {
+            font-size: 7px;  /* ← System name size */
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 3px #fff;
+        }
+        
+        /* =====================================================
+           🎨 SYSTEM COLORS - CUSTOMIZE EACH CONSOLE COLOR
+           ===================================================== */
+        .nes { color: #e74c3c; }      /* ← NES = Red */
+        .snes { color: #9b59b6; }     /* ← SNES = Purple */
+        .genesis { color: #3498db; }  /* ← Genesis = Blue */
+        .arcade { color: #f39c12; }   /* ← Arcade = Orange */
+        .atari { color: #e67e22; }    /* ← Atari = Orange-red */
+        .gameboy { color: #95a5a6; }  /* ← Game Boy = Gray */
+        .psx { color: #0099ff; }      /* ← PSX = Bright Blue */
+        
+        /* =====================================================
+           🔙 BACK BUTTONS - CUSTOMIZE BUTTON COLORS
+           ===================================================== */
+        .back-btn {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ff00ff;  /* ← Border color */
+            color: #ff00ff;  /* ← Text color */
+            padding: 6px 12px;
+            font-size: 6px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+            flex-shrink: 0;  /* ← Don't shrink in flex layout */
+        }
+        
+        .back-btn:hover {
+            background: #ff00ff;  /* ← Hover background */
+            color: #000;  /* ← Hover text color */
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+        }
+        
+        /* =====================================================
+           📜 GAME LIST - CUSTOMIZE GAME DISPLAY
+           ===================================================== */
+        #game-list {
+            display: none;
+            flex: 1;  /* ← Grow to fill remaining space */
+            flex-direction: column;
+            overflow: hidden;  /* ← Contain the scrollable container */
+        }
+        
+        #game-list.active {
+            display: flex;  /* ← Use flex when active */
+        }
+        
+        .games-container {
+            flex: 1;  /* ← Grow to fill space */
+            overflow-y: auto;  /* ← Scrollable */
+            padding-right: 5px;
+        }
+        
+        /* Custom scrollbar */
+        .games-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .games-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .games-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #ff00ff, #00ffff);  /* ← Scrollbar colors */
+            border-radius: 4px;
+        }
+        
+        .game-item {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #333;
+            padding: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            animation: slide-in 0.3s ease-out backwards;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .favorite-star {
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .favorite-star:hover {
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 5px #ffff00);
+        }
+        
+        .game-info {
+            flex: 1;
+        }
+        
+        .game-item.favorite {
+            border-color: #ffff00;
+            background: rgba(255, 255, 0, 0.1);
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+        }
+        
+        /* Stagger game list animations */
+        .game-item:nth-child(1) { animation-delay: 0.05s; }
+        .game-item:nth-child(2) { animation-delay: 0.1s; }
+        .game-item:nth-child(3) { animation-delay: 0.15s; }
+        .game-item:nth-child(4) { animation-delay: 0.2s; }
+        .game-item:nth-child(5) { animation-delay: 0.25s; }
+        
+        .game-item:hover {
+            border-color: #00ffff;  /* ← Game hover border */
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+            /* Only lights up - no transform/movement */
+        }
+        
+        .game-item.selected {
+            border-color: #ffff00;
+            background: rgba(255, 255, 0, 0.1);
+        }
+        
+        .game-title {
+            font-size: 8px;  /* ← Game title size */
+            color: #00ffff;  /* ← Game title color */
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px #00ffff;
+        }
+        
+        .game-desc {
+            font-size: 5px;  /* ← Game description size */
+            color: #aaa;  /* ← Game description color */
+            line-height: 1.4;
+        }
+        
+        /* =====================================================
+           🎮 GAME SCREEN - IFRAME & FLOATING MENU BUTTON
+           ===================================================== */
+        #game-screen {
+            display: none;  /* ← Hidden by default */
+            width: 100%;
+            height: 100%;
+            position: absolute;  /* ← Position absolute so it overlays everything */
+            top: 0;
+            left: 0;
+            z-index: 100;  /* ← Above other content */
+            overflow: hidden;  /* ← HIDE scrollbars - we're masking! */
+        }
+        
+        #game-screen.active {
+            display: block;  /* ← Simple block display */
+        }
+        
+        #game-iframe {
+            width: 100%;  /* ← Full width - showing Archive.org details page */
+            height: 900px;  /* ← Extra tall (900px) */
+            border: none;
+            background: #000;
+            /* SIMULATE EMBEDDING - only mask the BOTTOM */
+            /* No margin-top - show Archive.org header normally */
+        }
+        
+        /* Archive.org /details/ page shows FULL interface with guaranteed unmute button */
+        
+        /* Bottom mask to hide Archive.org footer/extra content */
+        #game-screen::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;  /* ← Height of mask - adjust as needed */
+            background: linear-gradient(0deg, #000814 0%, transparent 100%);
+            pointer-events: none;  /* ← Allow clicks through the gradient */
+            z-index: 10;
+        }
+        
+        /* Archive.org emulator renders the game AND controls inside the iframe.
+           130% width and 110% height ensures the control bar is fully visible and centered. */
+        
+        /* Floating MENU button (visible during gameplay) */
+        .back-btn-floating {
+            position: absolute;
+            top: 10px;  /* ← Top */
+            right: 10px;  /* ← Right */
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ff00ff;
+            color: #ff00ff;
+            padding: 6px 10px;
+            font-size: 6px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+        
+        .back-btn-floating:hover {
+            background: #ff00ff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+            transform: scale(1.1);
+        }
+        
+        /* Click hint overlay */
+        .click-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 255, 0.9);
+            color: #000;
+            padding: 10px 15px;
+            font-size: 6px;
+            border: 2px solid #000;
+            pointer-events: none;
+            animation: pulse-neon 1.5s infinite;
+            z-index: 999;
+        }
+        
+        .click-hint.hidden {
+            display: none;
+        }
+        
+        /* =====================================================
+           🔊 SOUND BUTTON - TOP RIGHT CORNER
+           ===================================================== */
+        .sound-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1500;
+            background: rgba(255, 0, 255, 0.2);
+            border: 1px solid #ff00ff;
+            color: #ff00ff;
+            padding: 5px 10px;  /* ← Was 4px 8px */
+            font-size: 6px;  /* ← Was 5px */
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sound-btn-controls {
+            position: fixed;
+            top: 10px;
+            right: 120px;  /* ← To the left of sound button */
+            z-index: 1500;
+            background: rgba(255, 0, 255, 0.2);
+            border: 1px solid #ff00ff;
+            color: #ff00ff;
+            padding: 5px 10px;
+            font-size: 6px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sound-btn:hover,
+        .sound-btn-controls:hover {
+            background: #ff00ff;
+            color: #000;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
+        }
+        
+        .sound-btn.muted {
+            background: rgba(100, 100, 100, 0.2);
+            border-color: #666;
+            color: #666;
+        }
+        
+        /* Save Info Button */
+        .save-info-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;  /* ← Left side of screen */
+            z-index: 1500;
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 5px 10px;
+            font-size: 6px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .save-info-btn:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+        }
+        
+        .sound-btn:hover {
+            background: #ff00ff;
+            color: #000;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.8);
+        }
+        
+        .sound-btn.muted {
+            color: #666;
+            border-color: #666;
+        }
+        
+        /* =====================================================
+           🎮 CONTROLS GUIDE OVERLAY
+           ===================================================== */
+        #controls-overlay {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #ff00ff;
+            padding: 15px;
+            z-index: 2000;
+            max-width: 450px;
+            max-height: 450px;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+        }
+        
+        #controls-overlay.active {
+            display: block;
+            animation: slide-in 0.3s ease-out;
+        }
+        
+        .controls-title {
+            font-size: 10px;
+            color: #ff00ff;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+        
+        .controls-content {
+            font-size: 6px;
+            color: #00ffff;
+            line-height: 1.6;
+        }
+        
+        .control-section {
+            margin-bottom: 8px;
+            padding: 6px;
+            background: rgba(255, 0, 255, 0.1);
+            border-left: 2px solid #00ffff;
+        }
+        
+        .control-label {
+            color: #ffff00;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .close-controls {
+            background: #ff00ff;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            font-size: 6px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .close-controls:hover {
+            background: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+        
+        /* =====================================================
+           💾 SAVE INFO OVERLAY
+           ===================================================== */
+        #save-info-overlay {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ffff;  /* ← Cyan border */
+            padding: 15px;
+            z-index: 2000;
+            max-width: 450px;
+            max-height: 450px;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);  /* ← Cyan glow */
+        }
+        
+        #save-info-overlay.active {
+            display: block;
+            animation: slide-in 0.3s ease-out;
+        }
+        
+        .save-info-title {
+            font-size: 10px;
+            color: #00ffff;  /* ← Cyan title */
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        
+        .save-info-content {
+            font-size: 6px;
+            color: #ffffff;  /* ← White text for readability */
+            line-height: 1.6;
+        }
+        
+        .save-info-section {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(0, 255, 255, 0.1);
+            border-left: 2px solid #ff00ff;
+        }
+        
+        .save-info-label {
+            color: #ffff00;  /* ← Yellow labels */
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .close-save-info {
+            background: #00ffff;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            font-size: 6px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .close-save-info:hover {
+            background: #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="container">
+        <div class="header">
+            <h1>🎮 GAME RENTAL 🎮</h1>
+            <p>PICK YOUR SYSTEM</p>
+        </div>
+        
+        <!-- SYSTEM SELECT SCREEN -->
+        <div id="system-select">
+            <div class="systems-grid" id="systemsGrid">
+                <!-- Systems populated by JavaScript below -->
+            </div>
+        </div>
+        
+        <!-- GAME LIST SCREEN -->
+        <div id="game-list">
+            <button class="back-btn" onclick="backToSystems()">◀ BACK TO SYSTEMS</button>
+            <div class="games-container" id="gamesContainer">
+                <!-- Games populated by JavaScript below -->
+            </div>
+        </div>
+        
+        <!-- GAME PLAYING SCREEN -->
+        <div id="game-screen">
+            <button class="back-btn-floating" onclick="backToGameList()">◀ MENU</button>
+            <iframe id="game-iframe" allow="autoplay; fullscreen; clipboard-read; clipboard-write" allowfullscreen sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"></iframe>
+            <div class="click-hint" id="clickHint">FULL ARCHIVE.ORG PAGE - UNMUTE BUTTON IN PLAYER CONTROLS</div>
+        </div>
+        
+        <!-- TOP CONTROLS - SOUND & GAME CONTROLS -->
+        <button id="soundToggle" class="sound-btn">🔊 SFX ON</button>
+        <button id="controlsBtn" class="sound-btn-controls" onclick="showControlsForCurrentSystem()" style="display:none;">🎮 CONTROLS</button>
+        <button id="saveInfoBtn" class="save-info-btn" onclick="showSaveInfo()">💾 SAVE INFO</button>
+        
+        <!-- CONTROLS GUIDE OVERLAY -->
+        <div id="controls-overlay">
+            <div class="controls-title" id="controls-system-name">CONTROLS</div>
+            <div class="controls-content" id="controls-text">
+                <!-- Controls populated by JavaScript -->
+            </div>
+            <button class="close-controls" onclick="closeControls()">CLOSE [ESC]</button>
+        </div>
+        
+        <!-- SAVE INFO OVERLAY -->
+        <div id="save-info-overlay">
+            <div class="save-info-title">💾 SAVE YOUR PROGRESS 💾</div>
+            <div class="save-info-content">
+                <div class="save-info-section">
+                    <div class="save-info-label">✅ GOOD NEWS!</div>
+                    Your game saves ARE persistent! Archive.org automatically saves your progress in your browser's storage.
+                </div>
+                
+                <div class="save-info-section">
+                    <div class="save-info-label">🎮 HOW IT WORKS</div>
+                    1. Play any game<br>
+                    2. Save using the in-game save system<br>
+                    3. Close browser/tab<br>
+                    4. Return later - your save is still there!
+                </div>
+                
+                <div class="save-info-section">
+                    <div class="save-info-label">👥 MULTI-USER? USE BROWSER PROFILES!</div>
+                    If multiple people use this computer:<br><br>
+                    <strong>CHROME:</strong> Click profile icon (top-right) → "Add Profile" → Name it (your SL name!)<br><br>
+                    <strong>FIREFOX:</strong> Click profile icon → "Manage Profiles" → Create new<br><br>
+                    Each profile = separate memory card!
+                </div>
+                
+                <div class="save-info-section">
+                    <div class="save-info-label">⚠️ IMPORTANT NOTES</div>
+                    • Always use the SAME browser profile<br>
+                    • Don't clear browser data (you'll lose saves)<br>
+                    • Saves are tied to THIS computer + browser<br>
+                    • For RPGs, bookmark the game URL!
+                </div>
+                
+                <div class="save-info-section">
+                    <div class="save-info-label">🔧 TROUBLESHOOTING</div>
+                    <strong>Lost saves?</strong> Check if you're in the right browser profile<br><br>
+                    <strong>Save not appearing?</strong> Make sure you saved using the in-game menu (not just closing the game)
+                </div>
+            </div>
+            <button class="close-save-info" onclick="closeSaveInfo()">CLOSE [ESC]</button>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // 🎮 GAME DATABASE - ADD YOUR GAMES HERE!
+        // =====================================================
+        // 
+        // HOW TO ADD GAMES:
+        // 1. Find a working game on archive.org
+        // 2. Get the embed URL: https://archive.org/details/GAME-ID
+        // 3. Add it to the games array for the right system
+        // 4. Format: { title: "Name", description: "Info", url: "URL" }
+        //
+        // HOW TO UPDATE CONTROLS:
+        // - Edit the "controls" text for each system below
+        // - Use simple formatting (the guide auto-wraps text)
+        //
+        // =====================================================
+        
+        const SYSTEMS = {
+            nes: {
+                name: 'NES',
+                icon: '🕹️',
+                color: '#e74c3c',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area to give it focus. You MUST do this before controls work!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ MOVEMENT</div>
+                        Arrow Keys = D-Pad (Up, Down, Left, Right)
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎮 BUTTONS</div>
+                        Z or CTRL = A Button (Jump/Action)<br>
+                        X or ALT = B Button (Run/Attack)<br>
+                        ENTER = Start<br>
+                        SHIFT = Select
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🪙 ARCADE MODE</div>
+                        5 = Insert Coin<br>
+                        1 = Start Game (Player 1)<br>
+                        2 = Start Game (Player 2)
+                    </div>
+                `,
+                games: [
+                    {
+                        title: "Paperboy",
+                        description: "Deliver papers and avoid obstacles",
+                        url: "https://archive.org/details/paperboy_nes"
+                    },
+                    {
+                        title: "Super Mario World",
+                        description: "Classic Mario platforming adventure",
+                        url: "https://archive.org/details/super-mario-world-usa_202406"
+                    },
+                    // ADD MORE NES GAMES HERE
+                ]
+            },
+            snes: {
+                name: 'SNES',
+                icon: '🎮',
+                color: '#9b59b6',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area to give it focus!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ MOVEMENT</div>
+                        Arrow Keys = D-Pad
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎮 FACE BUTTONS</div>
+                        Z = B Button (Bottom)<br>
+                        X = A Button (Right)<br>
+                        A = Y Button (Left)<br>
+                        S = X Button (Top)
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎯 SHOULDER BUTTONS</div>
+                        Q = L Button<br>
+                        W = R Button
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">⏯️ START/SELECT</div>
+                        ENTER = Start<br>
+                        SHIFT = Select
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🪙 ARCADE MODE</div>
+                        5 = Insert Coin<br>
+                        1 = Start (P1) | 2 = Start (P2)
+                    </div>
+                `,
+                games: [
+                    {
+                        title: "Super Mario Kart",
+                        description: "Classic kart racing action",
+                        url: "https://archive.org/details/super-mario-kart-usa_202303"
+                    },
+                    {
+                        title: "Pouet Demo",
+                        description: "SNES demo showcase",
+                        url: "https://archive.org/details/pouet_20352"
+                    },
+                    {
+                        title: "Super Metroid",
+                        description: "Epic sci-fi adventure",
+                        url: "https://archive.org/details/metroid-snes_202504"
+                    },
+                    {
+                        title: "DuckTales",
+                        description: "Scrooge's treasure hunt",
+                        url: "https://archive.org/details/duck-tales-snes_20250430"
+                    },
+                    {
+                        title: "Top Gear",
+                        description: "High-speed racing",
+                        url: "https://archive.org/details/top-gear_202501"
+                    },
+                    {
+                        title: "SimCity",
+                        description: "Build your dream city",
+                        url: "https://archive.org/details/simcity_snes"
+                    },
+                    {
+                        title: "Goof Troop",
+                        description: "Goofy and Max adventure",
+                        url: "https://archive.org/details/GoofTroopSnes"
+                    },
+                    {
+                        title: "Clue",
+                        description: "Solve the murder mystery",
+                        url: "https://archive.org/details/clue_snes"
+                    },
+                    {
+                        title: "Jeopardy!",
+                        description: "Answer in the form of a question",
+                        url: "https://archive.org/details/jeopardy_snes"
+                    },
+                    {
+                        title: "Earthworm Jim",
+                        description: "Groovy space adventure",
+                        url: "https://archive.org/details/earthworm-jim-usa_202301"
+                    },
+                    {
+                        title: "Monopoly",
+                        description: "Classic board game",
+                        url: "https://archive.org/details/monopoly_snes_2"
+                    },
+                    {
+                        title: "F-Zero",
+                        description: "Futuristic racing at high speeds",
+                        url: "https://archive.org/details/f-zero_202501"
+                    },
+                    // ADD MORE SNES GAMES HERE
+                ]
+            },
+            genesis: {
+                name: 'GENESIS',
+                icon: '⚡',
+                color: '#3498db',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ MOVEMENT</div>
+                        Arrow Keys = D-Pad
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">⚡ BUTTONS (3-Button)</div>
+                        Z or CTRL = A Button<br>
+                        X or ALT = B Button<br>
+                        C = C Button
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">⚡ BUTTONS (6-Button)</div>
+                        A = X Button | S = Y Button | D = Z Button
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">⏯️ START</div>
+                        ENTER = Start Button
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🪙 ARCADE MODE</div>
+                        5 = Insert Coin<br>
+                        1 = Start (P1) | 2 = Start (P2)
+                    </div>
+                `,
+                games: [
+                    {
+                        title: "Battle City",
+                        description: "Tank combat action",
+                        url: "https://archive.org/details/Battle_City_port_for_SEGA_Genesis"
+                    },
+                    {
+                        title: "Art Alive",
+                        description: "Digital art creation",
+                        url: "https://archive.org/details/art_bin"
+                    },
+                    {
+                        title: "Dynamite Headdy",
+                        description: "Puppet hero platformer",
+                        url: "https://archive.org/details/dynamite-headdy-usa-europe"
+                    },
+                    {
+                        title: "Mickey Mania",
+                        description: "Mickey through the years",
+                        url: "https://archive.org/details/mickey_bin"
+                    },
+                    {
+                        title: "Decap Attack",
+                        description: "Chuck D. Head's adventure",
+                        url: "https://archive.org/details/bean_bin"
+                    },
+                    {
+                        title: "Frogger",
+                        description: "Cross the road classic",
+                        url: "https://archive.org/details/frogger_gen"
+                    },
+                    {
+                        title: "Wolfchild",
+                        description: "Transform and fight",
+                        url: "https://archive.org/details/wolf_bin"
+                    },
+                    {
+                        title: "Cool Spot",
+                        description: "7UP mascot platformer",
+                        url: "https://archive.org/details/spot_bin"
+                    },
+                    {
+                        title: "Shadowrun",
+                        description: "Cyberpunk RPG prototype",
+                        url: "https://archive.org/details/shadowrun-prototype-jan-251994hiddenpalaceorg"
+                    },
+                    {
+                        title: "Itchy & Scratchy",
+                        description: "Simpsons cartoon mayhem",
+                        url: "https://archive.org/details/itchy_bin"
+                    },
+                    {
+                        title: "Ghouls 'n Ghosts",
+                        description: "Arthur's demon-slaying quest",
+                        url: "https://archive.org/details/daimakaimura-ghoulsn-ghosts-japan-usa-en"
+                    },
+                    // ADD MORE GENESIS GAMES HERE
+                ]
+            },
+            arcade: {
+                name: 'ARCADE',
+                icon: '👾',
+                color: '#f39c12',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ JOYSTICK</div>
+                        Arrow Keys = Movement
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎮 BUTTONS</div>
+                        Z/X/C = Action Buttons 1/2/3<br>
+                        A/S/D = Action Buttons 4/5/6
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🪙 COIN & START</div>
+                        5 = Insert Coin<br>
+                        1 = Start (P1) | 2 = Start (P2)
+                    </div>
+                `,
+                games: [
+                    // ADD ARCADE GAMES HERE
+                ]
+            },
+            atari: {
+                name: 'ATARI',
+                icon: '🎯',
+                color: '#e67e22',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ JOYSTICK</div>
+                        Arrow Keys = Movement (8-directional)
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🔴 FIRE BUTTON</div>
+                        SPACE or CTRL = Fire/Action
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎮 CONSOLE SWITCHES</div>
+                        F1 = Game Select (change mode)<br>
+                        F2 = Game Reset (restart)<br>
+                        F3 = Color/BW Toggle<br>
+                        F4 = Left Difficulty<br>
+                        F5 = Right Difficulty
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">💡 TIP</div>
+                        Many Atari games auto-start. If stuck on a screen, try F1 or F2!
+                    </div>
+                `,
+                games: [
+                    {
+                        title: "Pac-Man",
+                        description: "Eat dots, avoid ghosts",
+                        url: "https://archive.org/details/PacMan1981Atari"
+                    },
+                    {
+                        title: "Dig Dug",
+                        description: "Dig and defeat enemies",
+                        url: "https://archive.org/details/digdug_a2600"
+                    },
+                    {
+                        title: "The Atari Olympics",
+                        description: "Classic sports compilation",
+                        url: "https://archive.org/details/a8b_Atari_Olympics_The_19xx_Atari_US"
+                    },
+                    {
+                        title: "Tank",
+                        description: "Two-player tank combat",
+                        url: "https://archive.org/details/tank_atari"
+                    },
+                    {
+                        title: "Castles & Keys",
+                        description: "Maze adventure quest",
+                        url: "https://archive.org/details/castles_a2600"
+                    },
+                    {
+                        title: "Midnight Magic",
+                        description: "Pinball wizard action",
+                        url: "https://archive.org/details/atari_2600_midnight_magic_pinball_wizard_1984_atari_glenn_axworthy_cx26129"
+                    },
+                    {
+                        title: "Canyon Bomber",
+                        description: "Paddle-based bombing",
+                        url: "https://archive.org/details/atari_2600_canyon_bomber_paddle_1979_atari_david_crane_-_sears_cx2607_-_6-99828_4"
+                    },
+                    {
+                        title: "Ms. Pac-Man",
+                        description: "Lady pac dots and power pellets",
+                        url: "https://archive.org/details/mspacman_a2600"
+                    },
+                    {
+                        title: "Basketbrawl",
+                        description: "Futuristic hoops mayhem",
+                        url: "https://archive.org/details/Basketbrawl_1990_Atari_NTSC"
+                    },
+                    {
+                        title: "Jr. Pac-Man",
+                        description: "Pac-Man's kid adventures",
+                        url: "https://archive.org/details/jrpacman_a2600"
+                    },
+                    {
+                        title: "Xenophobe",
+                        description: "Alien extermination",
+                        url: "https://archive.org/details/Xenophobe_1989_Atari_NTSC"
+                    },
+                    {
+                        title: "Joust",
+                        description: "Flying ostrich combat",
+                        url: "https://archive.org/details/Joust_1987_Atari_NTSC"
+                    },
+                    {
+                        title: "Galaga",
+                        description: "Classic space shooter",
+                        url: "https://archive.org/details/Galaga_1987_Atari_NTSC"
+                    },
+                    // ADD MORE ATARI GAMES HERE
+                ]
+            },
+            gameboy: {
+                name: 'GAME BOY',
+                icon: '📱',
+                color: '#95a5a6',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ D-PAD</div>
+                        Arrow Keys = Movement
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎮 BUTTONS</div>
+                        Z or CTRL = A Button<br>
+                        X or ALT = B Button
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">⏯️ START/SELECT</div>
+                        ENTER = Start<br>
+                        SHIFT = Select
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🪙 ARCADE MODE</div>
+                        5 = Insert Coin<br>
+                        1 = Start Game
+                    </div>
+                `,
+                games: [
+                    {
+                        title: "Metroid II",
+                        description: "Blow stuff up as Samus",
+                        url: "https://archive.org/details/metroid-ii-return-of-samus-usa"
+                    },
+                    // ADD MORE GAME BOY GAMES HERE
+                ]
+            },
+            psx: {
+                name: 'PSX',
+                icon: '🎮',
+                color: '#0099ff',
+                controls: `
+                    <div class="control-section">
+                        <div class="control-label">⚠️ FIRST: ACTIVATE THE GAME</div>
+                        Click inside the game area!
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🕹️ D-PAD</div>
+                        Arrow Keys = D-Pad
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎮 FACE BUTTONS</div>
+                        Z = ✕ (Cross/Bottom)<br>
+                        X = ○ (Circle/Right)<br>
+                        A = □ (Square/Left)<br>
+                        S = △ (Triangle/Top)
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">🎯 SHOULDER BUTTONS</div>
+                        Q = L1 | W = R1<br>
+                        E = L2 | R = R2
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">⏯️ START/SELECT</div>
+                        ENTER = Start<br>
+                        SHIFT = Select
+                    </div>
+                    <div class="control-section">
+                        <div class="control-label">📊 ANALOG STICKS (if supported)</div>
+                        WASD = Left Analog<br>
+                        IJKL = Right Analog
+                    </div>
+                `,
+                games: [
+                    {
+                        title: "Need For Speed 3",
+                        description: "Hot pursuit racing",
+                        url: "https://archive.org/details/psx_nfs3"
+                    },
+                    {
+                        title: "Medal of Honor",
+                        description: "WWII action adventure",
+                        url: "https://archive.org/details/psx_mhonr"
+                    },
+                    {
+                        title: "Marvel VS. Capcom Clash of hero's",
+                        description: "Time for some Fistycuffs!",
+                        url: "https://archive.org/details/psx_mvsc"
+                    },
+                    {
+                        title: "Crash Bandicoot Team Racing",
+                        description: "Burn rubber with Crash and friends!",
+                        url: "https://archive.org/details/psx_ctr"
+                    },
+                    {
+                        title: "The Need for speed 2",
+                        description: "Race high profile exotics in various locations",
+                        url: "https://archive.org/details/psx_nfs2"
+                    },
+                    {
+                        title: "Marvel Super Hero's",
+                        description: "Fight with your favorite Marvel super hero's",
+                        url: "https://archive.org/details/psx_msh"
+                    },
+                    {
+                        title: "Tekken",
+                        description: "Enter the Tekken tournament!",
+                        url: "https://archive.org/details/psx_tekken"
+                    },
+                    {
+                        title: "Tekken 2",
+                        description: "Battle it out in Tekken 2!",
+                        url: "https://archive.org/details/psx_tekken2"
+                    },
+                    {
+                        title: "Tekken 3",
+                        description: "Fight once again in the Tekken Tournament!",
+                        url: "https://archive.org/details/psx_tekken3"
+                    },
+                    {
+                        title: "Kensei Sacred Fist",
+                        description: "Give them the official boot to face treatment in Kensei Sacred Fist!",
+                        url: "https://archive.org/details/psx_kensei"
+                    },
+                    {
+                        title: "Bloody Roar",
+                        description: "Transform and dominate in Bloody Roar!",
+                        url: "https://archive.org/details/psx_bldyroar"
+                    },
+                    {
+                        title: "Bloody Roar 2",
+                        description: "Destory opponents with your spirit animal!",
+                        url: "https://archive.org/details/psx_bldyror2"
+                    },
+                    {
+                        title: "Street Fighter Alpha Warriors dream",
+                        description: "Fight it out in Streetfighter Aplha!",
+                        url: "https://archive.org/details/psx_sfa"
+                    },
+                    {
+                        title: "Street Fighter Collection 2",
+                        description: "Fight it out again in Streetfighter the collection!",
+                        url: "https://archive.org/details/psx_sfcoll2"
+                    },
+                    {
+                        title: "Street Fighter Alpha 2",
+                        description: "Street Fighter Aplha returns!",
+                        url: "https://archive.org/details/psx_sfa2"
+                    },
+                    {
+                        title: "Street Fighter Alpha 3",
+                        description: "Street Fighter Alpha 3!",
+                        url: "https://archive.org/details/psx_sfa3"
+                    },
+                    {
+                        title: "Street Fighter EX Aplha",
+                        description: "Street fighter EX Alpha!",
+                        url: "https://archive.org/details/psx_sfexpa"
+                    },
+                    {
+                        title: "Marvel Hero's VS Streetfighter",
+                        description: "Marvel takes on Streetfighter!",
+                        url: "https://archive.org/details/psx_mshvsf"
+                    },
+                    {
+                        title: "XMEN VS Streetfighter",
+                        description: "XMen takes on Streetfighter!",
+                        url: "https://archive.org/details/psx_xmvsf"
+                    },
+                    {
+                        title: "Street fighter EX 2 Plus",
+                        description: "Street fighter EX 2 Plus!",
+                        url: "https://archive.org/details/psx_sfex2p"
+                    },
+                    {
+                        title: "Battle Arena Toshiden",
+                        description: "The Classic Battle Arena Toshiden!",
+                        url: "https://archive.org/details/psx_toshin"
+                    },
+                    {
+                        title: "Battle Arena Toshiden 2",
+                        description: "Battle Arena Toshiden 2!",
+                        url: "https://archive.org/details/psx_toshin2"
+                    },
+                    {
+                        title: "Battle Arena Toshiden 3",
+                        description: "Battle arena Toshiden 3!",
+                        url: "https://archive.org/details/psx_toshin3"
+                    },
+                    {
+                        title: "Ready 2 Rumble Boxing Round 2",
+                        description: "Ready to rumble Boxing Round 2!",
+                        url: "https://archive.org/details/psx_r2rumbl2"
+                    },
+                    {
+                        title: "Demolition Derby Raw",
+                        description: "Demolition Derby Raw!",
+                        url: "https://archive.org/details/psx_dderbyrw"
+                    },
+                    {
+                        title: "Bushido Blade",
+                        description: "Bushido Blade",
+                        url: "https://archive.org/details/psx_bblade"
+                    },
+                    {
+                        title: "Bushido Blade 2",
+                        description: "Bushido Blade 2",
+                        url: "https://archive.org/details/psx_bblade2"
+                    },
+                    {
+                        title: "Gundam Battle Assault",
+                        description: "Gundam Battle Assault",
+                        url: "https://archive.org/details/psx_gundbass"
+                    },
+                    {
+                        title: "Gundam Battle Assault 2",
+                        description: "Gundam Battle Assault 2",
+                        url: "https://archive.org/details/psx_gundbas2"
+                    },
+                    {
+                        title: "WWF Smackdown!",
+                        description: "WWF Smackdown",
+                        url: "https://archive.org/details/psx_wwfsmackp"
+                    },
+                    {
+                        title: "WWF Smackdown 2",
+                        description: "WWF Smackdown 2 Know your role!",
+                        url: "https://archive.org/details/psx_wwfsmac2"
+                    },
+                    {
+                        title: "WWF Wrestlemania the Arcade Game",
+                        description: "WWF Wrestlemania the arcade game",
+                        url: "https://archive.org/details/psx_wwfmania"
+                    },
+                    {
+                        title: "WWF In your house",
+                        description: "WWF In Your House!",
+                        url: "https://archive.org/details/psx_wwfiyh"
+                    },
+                    {
+                        title: "Wu Tang Shaolin Style",
+                        description: "Wu Tang Shaolin Style",
+                        url: "https://archive.org/details/psx_wutang"
+                    },
+                    {
+                        title: "Ridge Racer",
+                        description: "Ridge Racer",
+                        url: "https://archive.org/details/psx_ridgerac"
+                    },
+                    {
+                        title: "Ridge Racer Evolution",
+                        description: "Rideg Racer Evolution",
+                        url: "https://archive.org/details/psx_rrrev"
+                    },
+                    {
+                        title: "All Star Racing",
+                        description: "All Star Racing",
+                        url: "https://archive.org/details/psx_asracing"
+                    },
+                    {
+                        title: "Rage Racer",
+                        description: "Rage Racer",
+                        url: "https://archive.org/details/psx_ragerace"
+                    },
+                    {
+                        title: "Wipeout",
+                        description: "Wipeout racing",
+                        url: "https://archive.org/details/psx_wipeout"
+                    },
+                    {
+                        title: "Wipeout XL",
+                        description: "Wipeout XL Racing",
+                        url: "https://archive.org/details/psx_wpoutxl"
+                    },
+                    {
+                        title: "Wipeout 3",
+                        description: "Wipeout Racing 3",
+                        url: "https://archive.org/details/psx_wipeout3"
+                    },
+                    {
+                        title: "Jetmoto",
+                        description: "Jetmoto Racing",
+                        url: "https://archive.org/details/psx_jetmoto"
+                    },
+                    {
+                        title: "Jetmoto 2 Championship edition",
+                        description: "Jetmoto 2",
+                        url: "https://archive.org/details/psx_jmoto2ce"
+                    },
+                    // ADD MORE PSX GAMES HERE
+                ]
+            }
+        };
+        
+        let selectedSystem = null;
+        let selectedGameIndex = 0;
+        let soundEnabled = true;  // ← Sound ON by default!
+        let audioContext = null;
+        
+        // Favorites system
+        let favorites = {};
+        
+        // Load favorites from localStorage
+        function loadFavorites() {
+            try {
+                const saved = localStorage.getItem('arcadeFavorites');
+                if (saved) {
+                    favorites = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.log('Could not load favorites');
+            }
+        }
+        
+        // Save favorites to localStorage
+        function saveFavorites() {
+            try {
+                localStorage.setItem('arcadeFavorites', JSON.stringify(favorites));
+            } catch (e) {
+                console.log('Could not save favorites');
+            }
+        }
+        
+        // Toggle favorite status
+        function toggleFavorite(systemKey, gameIndex) {
+            const key = `${systemKey}-${gameIndex}`;
+            if (favorites[key]) {
+                delete favorites[key];
+            } else {
+                favorites[key] = true;
+            }
+            saveFavorites();
+            loadGames(); // Reload to update display
+        }
+        
+        // Check if game is favorite
+        function isFavorite(systemKey, gameIndex) {
+            const key = `${systemKey}-${gameIndex}`;
+            return favorites[key] || false;
+        }
+        
+        const soundToggle = document.getElementById('soundToggle');
+        
+        // Initialize Web Audio API
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+        
+        // =====================================================
+        // 🔊 BEEP SOUND - Menu hover/click
+        // Customize: Change frequency for different pitch
+        // =====================================================
+        function playBeep() {
+            if (!soundEnabled) return;
+            const ctx = initAudio();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.frequency.value = 800;  // ← Change pitch (Hz)
+            oscillator.type = 'square';  // ← Wave type: 'square', 'sine', 'sawtooth', 'triangle'
+            
+            gainNode.gain.setValueAtTime(0.1, ctx.currentTime);  // ← Volume
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.1);  // ← Duration (seconds)
+        }
+        
+        // =====================================================
+        // 🎯 SELECT SOUND - Choosing system/game
+        // Customize: Change start/end frequencies for sweep
+        // =====================================================
+        function playSelect() {
+            if (!soundEnabled) return;
+            const ctx = initAudio();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.frequency.setValueAtTime(600, ctx.currentTime);  // ← Start pitch
+            oscillator.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.15);  // ← End pitch
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.15, ctx.currentTime);  // ← Volume
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.15);  // ← Duration
+        }
+        
+        // =====================================================
+        // 💰 COIN SOUND - Game launch (INSERT COIN!)
+        // Customize: Change the two frequencies for different tones
+        // =====================================================
+        function playCoin() {
+            if (!soundEnabled) return;
+            const ctx = initAudio();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.frequency.setValueAtTime(988, ctx.currentTime);  // ← First tone
+            oscillator.frequency.setValueAtTime(1319, ctx.currentTime + 0.1);  // ← Second tone
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.2, ctx.currentTime);  // ← Volume
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.2);  // ← Duration
+        }
+        
+        
+        // Sound toggle - now toggles sound effects only
+        soundToggle.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            
+            if (soundEnabled) {
+                initAudio();
+                playCoin(); // Play coin sound when turning on
+                // Note: Background music is now the RADIO system
+                soundToggle.textContent = '🔊 SFX ON';
+                soundToggle.classList.remove('muted');
+            } else {
+                soundToggle.textContent = '🔇 SFX OFF';
+                soundToggle.classList.add('muted');
+            }
+        });
+        
+        // =====================================================
+        // 🎮 SYSTEM CODE - MENU & NAVIGATION LOGIC
+        // You probably don't need to change anything below!
+        // =====================================================
+        
+        function showControls(systemKey) {
+            const system = SYSTEMS[systemKey];
+            const overlay = document.getElementById('controls-overlay');
+            const title = document.getElementById('controls-system-name');
+            const content = document.getElementById('controls-text');
+            
+            title.textContent = `${system.name} CONTROLS`;
+            content.innerHTML = system.controls;
+            overlay.classList.add('active');
+        }
+        
+        function showControlsForCurrentSystem() {
+            if (selectedSystem) {
+                showControls(selectedSystem);
+            }
+        }
+        
+        function closeControls() {
+            document.getElementById('controls-overlay').classList.remove('active');
+        }
+        
+        function showControlsButton() {
+            document.getElementById('controlsBtn').style.display = 'inline-block';
+        }
+        
+        function hideControlsButton() {
+            document.getElementById('controlsBtn').style.display = 'none';
+        }
+        
+        // =====================================================
+        // 💾 SAVE INFO PANEL FUNCTIONS
+        // =====================================================
+        function showSaveInfo() {
+            playBeep();  // Sound effect when opening
+            document.getElementById('save-info-overlay').classList.add('active');
+        }
+        
+        function closeSaveInfo() {
+            document.getElementById('save-info-overlay').classList.remove('active');
+        }
+        
+        function initSystemSelect() {
+            const grid = document.getElementById('systemsGrid');
+            grid.innerHTML = '';
+            
+            Object.keys(SYSTEMS).forEach(systemKey => {
+                const system = SYSTEMS[systemKey];
+                const box = document.createElement('div');
+                box.className = `system-box ${systemKey}`;
+                box.innerHTML = `
+                    <div class="system-icon">${system.icon}</div>
+                    <div class="system-name">${system.name}</div>
+                `;
+                box.onclick = () => selectSystem(systemKey);
+                grid.appendChild(box);
+                
+                // Add hover sound
+                box.addEventListener('mouseenter', () => playBeep());
+            });
+        }
+        
+        function selectSystem(systemKey) {
+            playSelect(); // Play select sound
+            selectedSystem = systemKey;
+            const system = SYSTEMS[systemKey];
+            
+            if (system.games.length === 0) {
+                alert('No games available for this system yet! Add some in the GAME DATABASE section!');
+                return;
+            }
+            
+            document.getElementById('system-select').classList.add('hidden');
+            document.getElementById('game-list').classList.add('active');
+            
+            loadGames();
+            showControlsButton();
+            
+            // Show controls guide
+            showControls(systemKey);
+        }
+        
+        function loadGames() {
+            const container = document.getElementById('gamesContainer');
+            const system = SYSTEMS[selectedSystem];
+            container.innerHTML = '';
+            selectedGameIndex = 0;
+            
+            // Sort games: favorites first
+            const gamesWithIndex = system.games.map((game, index) => ({ game, index }));
+            gamesWithIndex.sort((a, b) => {
+                const aFav = isFavorite(selectedSystem, a.index);
+                const bFav = isFavorite(selectedSystem, b.index);
+                if (aFav && !bFav) return -1;
+                if (!aFav && bFav) return 1;
+                return 0; // Keep original order within groups
+            });
+            
+            gamesWithIndex.forEach(({ game, index }, displayIndex) => {
+                const item = document.createElement('div');
+                item.className = 'game-item';
+                if (displayIndex === 0) item.classList.add('selected');
+                if (isFavorite(selectedSystem, index)) item.classList.add('favorite');
+                
+                const star = isFavorite(selectedSystem, index) ? '⭐' : '☆';
+                
+                item.innerHTML = `
+                    <span class="favorite-star" onclick="event.stopPropagation(); toggleFavorite('${selectedSystem}', ${index})">${star}</span>
+                    <div class="game-info">
+                        <div class="game-title">${game.title}</div>
+                        <div class="game-desc">${game.description}</div>
+                    </div>
+                `;
+                
+                item.onclick = () => playGame(index);
+                container.appendChild(item);
+                
+                // Add hover sound to games
+                item.addEventListener('mouseenter', () => playBeep());
+            });
+        }
+        
+        function playGame(index) {
+            playCoin(); // INSERT COIN!
+            const system = SYSTEMS[selectedSystem];
+            const game = system.games[index];
+            
+            // Hide game list, show game screen
+            document.getElementById('game-list').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            
+            // Add body class to fade radio controls
+            document.body.classList.add('game-active');
+            
+            // Load game in iframe
+            const iframe = document.getElementById('game-iframe');
+            iframe.src = game.url;
+            
+            // Show click hint for 8 seconds
+            const hint = document.getElementById('clickHint');
+            hint.classList.remove('hidden');
+            setTimeout(() => {
+                hint.classList.add('hidden');
+            }, 8000);
+            
+            // AUTO-SHOW CONTROLS for 5 seconds when game loads
+            setTimeout(() => {
+                showControlsForCurrentSystem();
+                // Auto-close after 5 seconds
+                setTimeout(() => {
+                    closeControls();
+                }, 5000);
+            }, 500);
+        }
+        
+        function backToGameList() {
+            playBeep();
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('game-list').classList.add('active');
+            document.getElementById('game-iframe').src = '';
+            
+            // Remove game-active class
+            document.body.classList.remove('game-active');
+        }
+        
+        function backToSystems() {
+            playBeep();
+            document.getElementById('game-list').classList.remove('active');
+            document.getElementById('system-select').classList.remove('hidden');
+            hideControlsButton();
+            selectedSystem = null;
+        }
+        
+        // =====================================================
+        // ⌨️ KEYBOARD NAVIGATION
+        // =====================================================
+        document.addEventListener('keydown', (e) => {
+            const gameList = document.getElementById('game-list');
+            const gameScreen = document.getElementById('game-screen');
+            const controlsOverlay = document.getElementById('controls-overlay');
+            const saveInfoOverlay = document.getElementById('save-info-overlay');
+            
+            // ESC closes save info overlay if it's open
+            if (saveInfoOverlay.classList.contains('active') && e.key === 'Escape') {
+                e.preventDefault();
+                closeSaveInfo();
+                return;
+            }
+            
+            // ESC closes controls overlay if it's open
+            if (controlsOverlay.classList.contains('active') && e.key === 'Escape') {
+                e.preventDefault();
+                closeControls();
+                return;
+            }
+            
+            if (gameScreen.classList.contains('active')) {
+                // In game screen - ESC to go back
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    backToGameList();
+                }
+            } else if (gameList.classList.contains('active')) {
+                // In game list
+                const system = SYSTEMS[selectedSystem];
+                const items = document.querySelectorAll('.game-item');
+                
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedGameIndex = Math.max(0, selectedGameIndex - 1);
+                    updateSelection(items);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedGameIndex = Math.min(system.games.length - 1, selectedGameIndex + 1);
+                    updateSelection(items);
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    playGame(selectedGameIndex);
+                } else if (e.key === 'Escape') {
+                    backToSystems();
+                }
+            }
+        });
+        
+        function updateSelection(items) {
+            items.forEach((item, i) => {
+                item.classList.toggle('selected', i === selectedGameIndex);
+            });
+            items[selectedGameIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        
+        // =====================================================
+        // 🚀 INITIALIZE THE ARCADE!
+        // =====================================================
+        loadFavorites();
+        initSystemSelect();
+    </script>
+</body>
+</html>
