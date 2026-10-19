@@ -146,6 +146,7 @@ body{
   background:radial-gradient(120px 80px at 50% 30%, rgba(143,13,22,.4), transparent), #0d0a12;
   border-bottom:1px solid rgba(200,168,74,.2);text-shadow:0 0 20px rgba(224,30,40,.6);filter:saturate(1.1)}
 .orig-card .art .orig-cover{width:100%;height:100%;object-fit:cover;display:block}
+.orig-card.has-cover .art{height:auto;aspect-ratio:3/4}  /* real box-art poster, not a cropped strip */
 .orig-card .meta{padding:12px 14px 14px}
 .orig-card .t{font-family:var(--f-pixel);font-size:.62rem;color:var(--bone);line-height:1.5;margin-bottom:8px}
 .orig-card .d{font-size:1rem;color:var(--ash);line-height:1.15;letter-spacing:.02em}
@@ -385,7 +386,7 @@ const CTRL = {
 
 /* ---- SINISTER ORIGINALS (self-hosted — add optional cover:'url') ---- */
 const ORIGINALS = [
-  { title:'CRASHOUT — Blackhills Asylum', desc:'Single-file raycaster FPS. Fight your way out of Blackhills Asylum.', icon:'🔫', url:'https://sinisterraz.github.io/Crashout/', ready:true },
+  { title:'CRASHOUT — Blackhills Asylum', desc:'Single-file raycaster FPS. Fight your way out of Blackhills Asylum.', icon:'🔫', cover:'crashout-cover.png', url:'https://sinisterraz.github.io/Crashout/', ready:true },
   { title:'GRAVELINK: The Silent Bell', desc:'GBA-style top-down action-adventure. SinisterBoy Advance SA-2001.', icon:'⚰️', url:'https://sinisterraz.github.io/Gravelink/', ready:true },
   { title:'Sinister Kart: Grave Prix', desc:'Halloween Mode 7 kart racer. Six themed circuits, monster roster.', icon:'🏎️', url:'https://sinisterraz.github.io/Sinister-Kart/', ready:true },
   { title:'Xmas Tic-Tac-Toe', desc:'Holiday twist on the classic X-and-O strategy game.', icon:'🎄', url:'https://sinisterraz.github.io/Xmas-Tic-Tac-Toe/', ready:true },
@@ -634,7 +635,7 @@ function renderOriginals(){
   rail.innerHTML='';
   ORIGINALS.forEach(o=>{
     const card=document.createElement('div');
-    card.className='orig-card'+(o.ready?'':' soon');
+    card.className='orig-card'+(o.ready?'':' soon')+(o.cover?' has-cover':'');
     const art = o.cover
       ? `<img class="orig-cover" src="${o.cover}" alt="" onerror="this.outerHTML='${o.icon}'">`
       : o.icon;
