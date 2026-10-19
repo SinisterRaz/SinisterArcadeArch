@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SINISTER ARCADE // v2.0</title>
+<title>SINISTER ARCADE // v2.1</title>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  SINISTER ARCADE  ·  v2.0  ·  Sinister Division               ║
+  ║  SINISTER ARCADE  ·  v2.1  ·  Sinister Division               ║
   ║  Single-file emulator frontend.                              ║
   ║  Systems: NES · SNES · Genesis · Arcade · Game Boy (GB/GBC/GBA)║
   ║  + Sinister Originals (self-hosted first-party titles)        ║
   ║                                                              ║
   ║  ADD GAMES: scroll to the DB block in <script> and drop a    ║
   ║  new { title, description, url } into the right system array. ║
-  ║  Originals load from local paths (games/<file>.html).        ║
-  ║  Drop your own cabinet art into --cabinet-art (see :root).   ║
+  ║  COVERS ARE AUTOMATIC: pulled from archive.org/services/img/ ║
+  ║  using the identifier in each game's url. Missing/blocked    ║
+  ║  covers fall back to the system emoji. Originals: add an     ║
+  ║  optional `cover:'url'` field or they keep their emoji art.  ║
   ╚══════════════════════════════════════════════════════════════╝
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -140,14 +142,15 @@ body{
 }
 .orig-card:hover,.orig-card:focus-visible{transform:translateY(-4px);border-color:var(--gold-lit);
   box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 26px rgba(200,168,74,.28);outline:none}
-.orig-card .art{height:118px;display:flex;align-items:center;justify-content:center;font-size:2.6rem;
+.orig-card .art{position:relative;height:118px;display:flex;align-items:center;justify-content:center;font-size:2.6rem;overflow:hidden;
   background:radial-gradient(120px 80px at 50% 30%, rgba(143,13,22,.4), transparent), #0d0a12;
   border-bottom:1px solid rgba(200,168,74,.2);text-shadow:0 0 20px rgba(224,30,40,.6);filter:saturate(1.1)}
+.orig-card .art .orig-cover{width:100%;height:100%;object-fit:cover;display:block}
 .orig-card .meta{padding:12px 14px 14px}
 .orig-card .t{font-family:var(--f-pixel);font-size:.62rem;color:var(--bone);line-height:1.5;margin-bottom:8px}
 .orig-card .d{font-size:1rem;color:var(--ash);line-height:1.15;letter-spacing:.02em}
 .orig-card .badge{position:absolute;top:8px;right:8px;font-family:var(--f-pixel);font-size:.42rem;
-  color:var(--void);background:var(--gold);padding:3px 6px;border-radius:3px;letter-spacing:.1em}
+  color:var(--void);background:var(--gold);padding:3px 6px;border-radius:3px;letter-spacing:.1em;z-index:2}
 .orig-card.soon{opacity:.6;cursor:default}
 .orig-card.soon:hover{transform:none;box-shadow:none;border-color:rgba(200,168,74,.28)}
 .orig-card.soon .badge{background:var(--ash)}
@@ -199,25 +202,38 @@ body{
 .tab.on{color:var(--void);background:var(--gold);border-color:var(--gold)}
 .tab:hover:not(.on){color:var(--gold-lit);border-color:var(--gold)}
 
-.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+/* ── poster grid: covers, not names ── */
+.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(156px,1fr));gap:14px}
 .game{
-  position:relative;display:flex;gap:12px;align-items:center;cursor:pointer;
+  position:relative;cursor:pointer;border-radius:8px;overflow:hidden;
   background:linear-gradient(180deg,var(--panel),var(--crypt));
-  border:1px solid var(--line);border-left:3px solid transparent;border-radius:6px;
-  padding:13px 14px 13px 12px;transition:.14s
+  border:1px solid var(--line);
+  transition:transform .14s ease, box-shadow .14s ease, border-color .14s;
 }
-.game:hover,.game.sel{border-color:var(--cyan);border-left-color:var(--cyan);
-  box-shadow:0 0 20px rgba(0,229,255,.14);transform:translateX(3px)}
-.game.fav{border-left-color:var(--gold)}
-.game.fav:hover,.game.fav.sel{border-color:var(--gold);box-shadow:0 0 20px rgba(200,168,74,.18)}
-.game .star{font-size:1.25rem;color:var(--gold);cursor:pointer;line-height:1;flex-shrink:0;transition:transform .12s}
-.game .star:hover{transform:scale(1.25)}
-.game .info{min-width:0}
-.game .gt{font-family:var(--f-pixel);font-size:.58rem;color:var(--bone);line-height:1.45;margin-bottom:5px}
-.game .gd{font-size:.98rem;color:var(--ash);line-height:1.05;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.game .plat{position:absolute;top:8px;right:10px;font-family:var(--f-pixel);font-size:.4rem;color:var(--ash);letter-spacing:.08em}
+.game:hover,.game.sel{border-color:var(--cyan);
+  box-shadow:0 10px 26px rgba(0,0,0,.5),0 0 20px rgba(0,229,255,.16);transform:translateY(-4px)}
+.game.fav{border-color:rgba(200,168,74,.5)}
+.game.fav:hover,.game.fav.sel{border-color:var(--gold);box-shadow:0 10px 26px rgba(0,0,0,.5),0 0 20px rgba(200,168,74,.2)}
 
-.empty{text-align:center;padding:56px 20px;color:var(--ash)}
+.game .cover{position:relative;aspect-ratio:1/1;background:#0d0a12;overflow:hidden;border-bottom:1px solid var(--line)}
+.game .cover-img{width:100%;height:100%;object-fit:cover;display:block;background:#0d0a12;filter:saturate(1.05) contrast(1.03)}
+.game .cover.noimg .cover-img{display:none}
+.game .cover-fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:radial-gradient(120px 90px at 50% 35%, rgba(143,13,22,.35), transparent), #0d0a12}
+.game .cover.noimg .cover-fallback{display:flex}
+.game .cover-fallback .fi{font-size:3rem;opacity:.6;filter:drop-shadow(0 0 14px rgba(224,30,40,.5))}
+
+.game .star{position:absolute;top:6px;left:7px;z-index:2;font-size:1.3rem;color:var(--gold);line-height:1;cursor:pointer;
+  transition:transform .12s;text-shadow:0 1px 4px rgba(0,0,0,.95)}
+.game .star:hover{transform:scale(1.25)}
+.game .plat{position:absolute;top:7px;right:7px;z-index:2;font-family:var(--f-pixel);font-size:.4rem;color:var(--bone);
+  background:rgba(10,8,14,.82);border:1px solid var(--line);padding:3px 5px;border-radius:3px;letter-spacing:.06em}
+
+.game .info{padding:9px 10px 11px}
+.game .gt{font-family:var(--f-pixel);font-size:.5rem;color:var(--bone);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.2em}
+
+.empty{grid-column:1/-1;text-align:center;padding:56px 20px;color:var(--ash)}
 .empty .big{font-family:var(--f-goth);font-size:2rem;color:var(--blood-lit);margin-bottom:10px;text-shadow:0 0 16px rgba(224,30,40,.4)}
 .empty .sub{font-size:1.1rem;letter-spacing:.04em}
 
@@ -257,7 +273,7 @@ footer .v{color:var(--gold)}
 
 @media (max-width:560px){
   .marquee h1{font-size:clamp(2.4rem,13vw,3.4rem)}
-  .games{grid-template-columns:1fr}
+  .games{grid-template-columns:repeat(2,1fr)}
   .lib-count{margin-left:0;width:100%}
 }
 </style>
@@ -296,7 +312,7 @@ footer .v{color:var(--gold)}
   </div>
   <section class="sys-grid" id="sysGrid"></section>
 
-  <footer>SINISTER ARCADE <span class="v">v2.0</span> · A SINISTER DIVISION JOINT</footer>
+  <footer>SINISTER ARCADE <span class="v">v2.1</span> · A SINISTER DIVISION JOINT</footer>
 </div>
 
 <!-- ── GAME LIBRARY ── -->
@@ -330,7 +346,7 @@ footer .v{color:var(--gold)}
 
 <script>
 /* ================================================================
-   SINISTER ARCADE v2.0 — data + logic
+   SINISTER ARCADE v2.1 — data + logic
    ================================================================ */
 
 /* ---- shared control cheat-sheets (documentation only) ---- */
@@ -358,12 +374,16 @@ const CTRL = {
     {lbl:'🕹 JOYSTICK', txt:'Arrow keys'},
     {lbl:'🎮 BUTTONS', txt:'<b>Ctrl · Alt · Space · Shift</b> = buttons 1–4'},
     {lbl:'🪙 COIN & START', txt:'<b>5</b> insert coin · <b>1</b> start · Some games: <b>Tab</b> opens the emulator menu'}],
+  pc:[C.activate,
+    {lbl:'🖱 MOUSE', txt:'Move + click inside the screen. Many DOS/Win games are mouse-driven.'},
+    {lbl:'⌨ KEYBOARD', txt:'Full keyboard passes through. <b>Ctrl+F12</b> may toggle speed in DOSBox.'},
+    {lbl:'⏯ EMULATOR', txt:'<b>Tab</b> / <b>Esc</b> for in-game menus. Give it a few seconds to boot.'}],
   gameboy:[C.activate,
     {lbl:'🕹 MOVEMENT', txt:'Arrow keys = D-Pad'},
     {lbl:'🎮 BUTTONS', txt:'<b>Z</b>=A · <b>X</b>=B · <b>Enter</b>=Start · <b>Shift</b>=Select'}],
 };
 
-/* ---- SINISTER ORIGINALS (self-hosted — edit paths to your files) ---- */
+/* ---- SINISTER ORIGINALS (self-hosted — add optional cover:'url') ---- */
 const ORIGINALS = [
   { title:'GRAVELINK: The Silent Bell', desc:'GBA-style top-down action-adventure. SinisterBoy Advance SA-2001.', icon:'⚰️', url:'https://sinisterraz.github.io/Gravelink/', ready:true },
   { title:'Sinister Kart: Grave Prix', desc:'Halloween Mode 7 kart racer. Six themed circuits, monster roster.', icon:'🏎️', url:'https://sinisterraz.github.io/Sinister-Kart/', ready:true },
@@ -372,11 +392,20 @@ const ORIGINALS = [
   { title:'CRYPTMON: Graveyard Green — SinisterBoy', desc:'Something is stirring in the archive…', icon:'👁️', url:'https://sinisterraz.github.io/Cryptmon/', ready:true },
 ];
 
-/* ---- SYSTEMS DB — add { title, description, url } to any array ---- */
+/* ---- SYSTEMS DB — add { title, description, url } to any array ----
+   Covers auto-load from archive.org/services/img/<identifier>.      */
 const SYSTEMS = {
   nes:{ name:'NES', icon:'🎮', tint:'#e74c3c', games:[
         { title:'Paperboy', description:'Deliver papers and avoid obstacles', url:'https://archive.org/details/paperboy_nes' },
-        { title:'Super Mario World', description:'Classic Mario platforming adventure', url:'https://archive.org/details/super-mario-world-usa_202406' }
+        { title:'Super Mario World', description:'Classic Mario platforming adventure', url:'https://archive.org/details/super-mario-world-usa_202406' },
+        { title:'Super Mario Bros. 3', description:'The definitive NES platformer', url:'https://archive.org/details/super-mario-bros.-3-usa_202401' },
+        { title:'Super Mario Bros. / Duck Hunt', description:'The pack-in double feature', url:'https://archive.org/details/super-mario-bros.-duck-hunt' },
+        { title:'Mike Tyson\'s Punch-Out!!', description:'Bob, weave, and swing for the title', url:'https://archive.org/details/mike-tysons-punch-out-japan-usa' },
+        { title:'Metroid II', description:'Samus on the hunt', url:'https://archive.org/details/metroid-ii-return-of-samus-usa' },
+        { title:'Galaga', description:'Blast the swarm', url:'https://archive.org/details/galaga_nes_2' },
+        { title:'Mega Man', description:'Run, gun, steal powers', url:'https://archive.org/details/mega-man-u' },
+        { title:'Metroid', description:'The original planet Zebes crawl', url:'https://archive.org/details/metroid_20240911_1811' },
+        { title:'The Legend of Zelda', description:'It\'s dangerous to go alone', url:'https://archive.org/details/zelda_nes_2' }
   ]},
   snes:{ name:'SNES', icon:'🕹️', tint:'#9b7ce0', games:[
         { title:'Super Mario Kart', description:'Classic kart racing action', url:'https://archive.org/details/super-mario-kart-usa_202303' },
@@ -390,7 +419,21 @@ const SYSTEMS = {
         { title:'Jeopardy!', description:'Answer in the form of a question', url:'https://archive.org/details/jeopardy_snes' },
         { title:'Earthworm Jim', description:'Groovy space adventure', url:'https://archive.org/details/earthworm-jim-usa_202301' },
         { title:'Monopoly', description:'Classic board game', url:'https://archive.org/details/monopoly_snes_2' },
-        { title:'F-Zero', description:'Futuristic racing at high speeds', url:'https://archive.org/details/f-zero_202501' }
+        { title:'F-Zero', description:'Futuristic racing at high speeds', url:'https://archive.org/details/f-zero_202501' },
+        { title:'Itchy & Scratchy', description:'Cartoon cat-and-mouse mayhem', url:'https://archive.org/details/itchy_snes_2' },
+        { title:'Super Castlevania IV', description:'Whip through Dracula\'s halls', url:'https://archive.org/details/super-castlevania-iv-usa_202301' },
+        { title:'Super Punch-Out!!', description:'Championship boxing, 16-bit', url:'https://archive.org/details/super-punch-out-usa_202301' },
+        { title:'AAAHH!!! Real Monsters', description:'Monster school antics', url:'https://archive.org/details/realmonsters_snes_2' },
+        { title:'Donkey Kong Country', description:'Rare\'s pre-rendered jungle classic', url:'https://archive.org/details/dkc_snes_2' },
+        { title:'Primal Rage', description:'Prehistoric beast brawler', url:'https://archive.org/details/primal_snes' },
+        { title:'Bubsy', description:'What could possibly go wrong?', url:'https://archive.org/details/busby_snes_2' },
+        { title:'NFL Quarterback Club 98', description:'16-bit gridiron', url:'https://archive.org/details/nfl98_snes_2' },
+        { title:'Bonkers', description:'Toon cop platformer', url:'https://archive.org/details/bonkers_snes' },
+        { title:'Pitfall: The Mayan Adventure', description:'Jungle-swinging sequel', url:'https://archive.org/details/pitfall_snes_2' },
+        { title:'Super Ghouls \'n Ghosts', description:'Arthur\'s brutal demon quest', url:'https://archive.org/details/super-ghoulsn-ghosts-usa_202301' },
+        { title:'Zelda: A Link to the Past', description:'Two worlds, one legend', url:'https://archive.org/details/legend-of-zelda-the-a-link-to-the-past-usa_202501' },
+        { title:'Super Mario All-Stars', description:'The 16-bit Mario collection', url:'https://archive.org/details/super-mario-all-stars-usa_202504' },
+        { title:'Tetris & Dr. Mario', description:'Two puzzle classics in one', url:'https://archive.org/details/tetris-dr-mario-snes' }
   ]},
   genesis:{ name:'GENESIS', icon:'🩸', tint:'#3aa0ff', games:[
         { title:'Battle City', description:'Tank combat action', url:'https://archive.org/details/Battle_City_port_for_SEGA_Genesis' },
@@ -442,10 +485,50 @@ const SYSTEMS = {
         { title:'Virtua Racing', description:'Race in 3D', url:'https://archive.org/details/sg_Virtua_Racing_1994_Sega_US' },
         { title:'Urban Strike', description:'Urban Strike', url:'https://archive.org/details/sg_Urban_Strike_1994_Electronic_Arts_EU-US_en' },
         { title:'Battletech', description:'Mech combat', url:'https://archive.org/details/sg_Battletech_1994_Extreme_Entertainment_US' },
-        { title:'Aladdin', description:'Disneys Aladdin', url:'https://archive.org/details/sg_Aladdin_1993_Sega_Virgin_US' },
         { title:'NFL Football 94', description:'NFL Football 94', url:'https://archive.org/details/NFL_Football_94_Starring_Joe_Montana_USA.md' },
         { title:'Pebble Beach Golf Links', description:'Pebble beach golf', url:'https://archive.org/details/Pebble_Beach_Golf_Links_USA.md' },
-        { title:'PGA Tour 96', description:'PGA Tour 1996', url:'https://archive.org/details/sg_PGA_Tour_96_1995_Electronic_Arts_NuFX_EU-US_en' }
+        { title:'PGA Tour 96', description:'PGA Tour 1996', url:'https://archive.org/details/sg_PGA_Tour_96_1995_Electronic_Arts_NuFX_EU-US_en' },
+        { title:'Earthworm Jim', description:'Groovy — on Genesis', url:'https://archive.org/details/earthworm-jim' },
+        { title:'The Revenge of Shinobi', description:'Ninja revenge, Genesis era', url:'https://archive.org/details/Revenge_of_Shinobi_The_USA_Europe_Rev_A.md' },
+        { title:'Ecco the Dolphin', description:'Eerie underwater odyssey', url:'https://archive.org/details/ecco_bin' },
+        { title:'Eternal Champions', description:'Sega\'s own fighting roster', url:'https://archive.org/details/Eternal_Champions_USA.md' },
+        { title:'Castlevania: Bloodlines', description:'Belmont vampire-hunting, 16-bit', url:'https://archive.org/details/Castlevania_Bloodlines_USA' },
+        { title:'ToeJam & Earl', description:'Funky alien exploration', url:'https://archive.org/details/ToeJam_Earl_USA_Europe_Korea_En.md' }
+  ]},
+  pc:{ name:'PC / DOS', icon:'🖥️', tint:'#39d98a', games:[
+        { title:'The Oregon Trail', description:'You have died of dysentery', url:'https://archive.org/details/oregon-trail-the-1990_202208' },
+        { title:'Oregon Trail Deluxe', description:'The enhanced wagon trek', url:'https://archive.org/details/OREDX' },
+        { title:'Number Munchers (CGA)', description:'Edutainment math muncher', url:'https://archive.org/details/NUMBER_CGA' },
+        { title:'King\'s Quest VI', description:'Heir Today, Gone Tomorrow', url:'https://archive.org/details/msdos_Kings_Quest_VI_-_Heir_Today_Gone_Tomorrow_1992' },
+        { title:'SimCity', description:'The original city builder', url:'https://archive.org/details/msdos_SimCity_1989' },
+        { title:'Wolfenstein 3D', description:'The granddaddy of FPS', url:'https://archive.org/details/msdos_Wolfenstein_3D_1992' },
+        { title:'King\'s Quest II', description:'Romancing the Throne', url:'https://archive.org/details/msdos_Kings_Quest_II_-_Romancing_the_Throne_1985' },
+        { title:'King\'s Quest I', description:'Quest for the Crown', url:'https://archive.org/details/msdos_Kings_Quest_I_-_Quest_for_the_Crown_1987' },
+        { title:'Space Quest IV', description:'Roger Wilco and the Time Rippers', url:'https://archive.org/details/msdos_Space_Quest_IV_-_Roger_Wilco_and_the_Time_Rippers_1991' },
+        { title:'Ultima Underworld', description:'The Stygian Abyss', url:'https://archive.org/details/msdos_Ultima_Underworld_-_The_Stygian_Abyss_1992' },
+        { title:'King\'s Quest VII', description:'The Princeless Bride', url:'https://archive.org/details/msdos_Kings_Quest_VII_-_The_Princeless_Bride_1994' },
+        { title:'Space Quest I (VGA)', description:'The Sarien Encounter', url:'https://archive.org/details/msdos_Space_Quest_I_-_The_Sarien_Encounter_VGA_1991' },
+        { title:'Loom', description:'Lucasfilm\'s musical adventure', url:'https://archive.org/details/msdos_Loom_1990' },
+        { title:'SimAnt', description:'The Electronic Ant Colony', url:'https://archive.org/details/msdos_SimAnt_-_The_Electronic_Ant_Colony_1991' },
+        { title:'SimFarm', description:'Build and run a farm', url:'https://archive.org/details/msdos_SimFarm_1993' },
+        { title:'Alone in the Dark', description:'The original survival horror', url:'https://archive.org/details/msdos_Alone_in_the_Dark_1992' },
+        { title:'Alone in the Dark 2', description:'More Lovecraftian dread', url:'https://archive.org/details/msdos_Alone_in_the_Dark_2_1993' },
+        { title:'Carmen Sandiego (World)', description:'Where in the World is she?', url:'https://archive.org/details/msdos_Where_in_the_World_is_Carmen_Sandiego_Enhanced_1989' },
+        { title:'The Incredible Machine', description:'Rube Goldberg puzzler', url:'https://archive.org/details/the_incredible_machine_1992' },
+        { title:'Stunts', description:'Build tracks, race, crash', url:'https://archive.org/details/msdos_Stunts_1990' },
+        { title:'Indianapolis 500', description:'The Simulation', url:'https://archive.org/details/msdos_Indianapolis_500_The_Simulation_1989' },
+        { title:'SimCity (alt)', description:'Another build of the classic', url:'https://archive.org/details/SimCity-2' },
+        { title:'Carmen Sandiego (USA)', description:'Where in the USA is she?', url:'https://archive.org/details/msdos_Where_in_the_USA_is_Carmen_Sandiego_Deluxe_1994' },
+        { title:'Amazon Trail', description:'Trek down the river', url:'https://archive.org/details/msdos_Amazon_Trail_1993' },
+        { title:'Odell Down Under (Win3)', description:'Reef ecosystem edutainment', url:'https://archive.org/details/win3_ODELL' },
+        { title:'Castle of Dr. Brain', description:'Brain-teaser adventure', url:'https://archive.org/details/msdos_Castle_of_Dr._Brain_1991' },
+        { title:'The Tortoise and the Hare', description:'Living Books storybook', url:'https://archive.org/details/win3_TheTorto' },
+        { title:'Berenstain Bears Get in a Fight', description:'Living Books storybook', url:'https://archive.org/details/LBTheBerenstainBearsFight' },
+        { title:'Ruff\'s Bone', description:'Living Books storybook', url:'https://archive.org/details/win3_ruffbone' },
+        { title:'Just Grandma and Me', description:'Living Books storybook', url:'https://archive.org/details/JustGrandmaAndMeV11' },
+        { title:'Arthur\'s Teacher Trouble', description:'Living Books storybook', url:'https://archive.org/details/ArthursTeacherTroubleV11' },
+        { title:'Arthur\'s Birthday', description:'Living Books storybook', url:'https://archive.org/details/LBArthursBirthday' },
+        { title:'Harry and the Haunted House', description:'Living Books storybook', url:'https://archive.org/details/harry-haunted-house' }
   ]},
   arcade:{ name:'ARCADE', icon:'👾', tint:'#ffb020', games:[
         { title:'King of Fighters 2002', description:'KOF 2002', url:'https://archive.org/details/arcade_kof2002' },
@@ -455,10 +538,53 @@ const SYSTEMS = {
         { title:'Rampage world tour', description:'Rampage', url:'https://archive.org/details/arcade_rmpgwt' },
         { title:'NBA Hangtime', description:'NBA Hangtime', url:'https://archive.org/details/arcade_nbahangt' },
         { title:'XMen children of Atom', description:'Xmen', url:'https://archive.org/details/arcade_xmcota' },
-        { title:'Tekken Tag Tournament', description:'Tekken Tag', url:'https://archive.org/details/arcade_tektagt' }
+        { title:'Tekken Tag Tournament', description:'Tekken Tag', url:'https://archive.org/details/arcade_tektagt' },
+        { title:'Tapper (Root Beer)', description:'Serve the thirsty crowd', url:'https://archive.org/details/arcade_rbtapper' },
+        { title:'Moon Patrol', description:'Hop the craters, blast aliens', url:'https://archive.org/details/arcade_mpatrol' },
+        { title:'The Simpsons', description:'Four-player beat-\'em-up', url:'https://archive.org/details/simpsons_mame' },
+        { title:'Spy Hunter', description:'Weaponized road chase', url:'https://archive.org/details/arcade_spyhunt' },
+        { title:'Metal Slug', description:'The run-and-gun original', url:'https://archive.org/details/arcade_mslug' },
+        { title:'Metal Slug X', description:'The enhanced Slug 2', url:'https://archive.org/details/arcade_mslugx' },
+        { title:'Metal Slug 2', description:'Super Vehicle sequel', url:'https://archive.org/details/arcade_mslug2' },
+        { title:'Metal Slug 3', description:'Series high-water mark', url:'https://archive.org/details/arcade_mslug3' },
+        { title:'Metal Slug 4', description:'More slug mayhem', url:'https://archive.org/details/arcade_mslug4' },
+        { title:'King of Fighters \'94', description:'The one that started it', url:'https://archive.org/details/arcade_kof94' },
+        { title:'Qix', description:'Claim the field', url:'https://archive.org/details/arcade_qix' },
+        { title:'TMNT', description:'Turtles arcade beat-\'em-up', url:'https://archive.org/details/tmnt_mame' },
+        { title:'Indiana Jones: Temple of Doom', description:'Whip-cracking arcade run', url:'https://archive.org/details/arcade_indytemp' },
+        { title:'Sinistar', description:'BEWARE, I LIVE!', url:'https://archive.org/details/arcade_sinistar' },
+        { title:'Dig Dug', description:'Inflate the underground', url:'https://archive.org/details/arcade_digdug' },
+        { title:'Road Blasters', description:'Armed combat racing', url:'https://archive.org/details/arcade_roadblst' },
+        { title:'Blasteroids', description:'Asteroids, evolved', url:'https://archive.org/details/arcade_blstroid' },
+        { title:'Marble Madness', description:'Roll through the maze', url:'https://archive.org/details/arcade_marble' },
+        { title:'After Burner II', description:'Jet-fighter arcade rush', url:'https://archive.org/details/arcade_aburner2' },
+        { title:'Super Sprint', description:'Top-down circuit racing', url:'https://archive.org/details/arcade_ssprint' },
+        { title:'1942', description:'WWII vertical shooter', url:'https://archive.org/details/arcade_1942' },
+        { title:'Paperboy', description:'Deliver the arcade route', url:'https://archive.org/details/arcade_paperboy' },
+        { title:'Centipede', description:'Trackball bug blaster', url:'https://archive.org/details/arcade_centiped' },
+        { title:'Tron', description:'Into the grid', url:'https://archive.org/details/arcade_tron' },
+        { title:'Q*bert', description:'Hop the pyramid', url:'https://archive.org/details/arcade_qbert' },
+        { title:'Captain America and the Avengers', description:'Marvel arcade brawler', url:'https://archive.org/details/arcade_captaven' },
+        { title:'Alien Syndrome', description:'Rescue hostages, kill aliens', url:'https://archive.org/details/arcade_aliensyn' },
+        { title:'RoboCop 2', description:'Dead or alive, you\'re coming', url:'https://archive.org/details/arcade_robocop2' },
+        { title:'Pitfall II', description:'Lost Caverns arcade dive', url:'https://archive.org/details/arcade_pitfall2' },
+        { title:'Hang-On', description:'Sega\'s superbike original', url:'https://archive.org/details/arcade_hangon' },
+        { title:'Out Run', description:'Cruise the branching highways', url:'https://archive.org/details/arcade_outrun' },
+        { title:'Cadillacs and Dinosaurs', description:'Capcom beat-\'em-up', url:'https://archive.org/details/arcade_dino' },
+        { title:'D&D: Shadow over Mystara', description:'Capcom fantasy brawler', url:'https://archive.org/details/arcade_ddsom' }
   ]},
   gameboy:{ name:'GAME BOY', icon:'📟', tint:'#8bc34a', platforms:['GB','GBC','GBA'], games:[
-        { title:'Metroid II', description:'Blow stuff up as Samus', url:'https://archive.org/details/metroid-ii-return-of-samus-usa', platform:'GB' }
+        { title:'Metroid II', description:'Blow stuff up as Samus', url:'https://archive.org/details/metroid-ii-return-of-samus-usa', platform:'GB' },
+        { title:'Pokémon Blue', description:'Gotta catch \'em all', url:'https://archive.org/details/pokemon-blue-version-usa-europe-sgb-enhanced', platform:'GB' },
+        { title:'Pokémon Red', description:'The enhanced Kanto classic', url:'https://archive.org/details/pokemon_red_enhanced', platform:'GB' },
+        { title:'Pokémon LeafGreen', description:'Kanto, remade on GBA', url:'https://archive.org/details/pokemon_leaf_green-version-u-v-1.1', platform:'GBA' },
+        { title:'Pokémon FireRed', description:'Kanto, remade on GBA', url:'https://archive.org/details/pokemon-fire-red-version_202308', platform:'GBA' },
+        { title:'Pokémon Ruby', description:'Hoenn region adventure', url:'https://archive.org/details/pokemon_ruby-version', platform:'GBA' },
+        { title:'Pokémon Sapphire', description:'Hoenn region adventure', url:'https://archive.org/details/pokemon-sapphire-version_202308', platform:'GBA' },
+        { title:'Pokémon Emerald', description:'The definitive Hoenn journey', url:'https://archive.org/details/pokemon-emerald-version_202308', platform:'GBA' },
+        { title:'Grand Theft Auto Advance', description:'Top-down Liberty City on GBA', url:'https://archive.org/details/grand_theft-auto-advance', platform:'GBA' },
+        { title:'Mario Kart: Super Circuit', description:'GBA kart racing', url:'https://archive.org/details/mario-kart-super-circuit_gba', platform:'GBA' },
+        { title:'GBA Minecraft (gbacraft)', description:'Blocky GBA homebrew', url:'https://archive.org/details/gbacraft', platform:'GBA' }
   ]},
 };
 
@@ -471,6 +597,16 @@ let cursor = 0;           // selection index into displayList
 let activePlatform = 'ALL';
 let favorites = {};
 let audioCtx = null, soundOn = true;
+
+/* ---- cover art: derive archive.org thumbnail from the item URL ---- */
+function arcId(url){
+  const m = /archive\.org\/(?:details|embed)\/([^/?#]+)/.exec(url||'');
+  return m ? m[1] : null;
+}
+function coverFor(url){
+  const id = arcId(url);
+  return id ? 'https://archive.org/services/img/'+id : null;
+}
 
 /* ---- favorites (localStorage, guarded for SL/CEF) ---- */
 function loadFavs(){ try{ const s=localStorage.getItem('sinisterArcadeFavs'); if(s) favorites=JSON.parse(s);}catch(e){} }
@@ -498,9 +634,12 @@ function renderOriginals(){
   ORIGINALS.forEach(o=>{
     const card=document.createElement('div');
     card.className='orig-card'+(o.ready?'':' soon');
+    const art = o.cover
+      ? `<img class="orig-cover" src="${o.cover}" alt="" onerror="this.outerHTML='${o.icon}'">`
+      : o.icon;
     card.innerHTML=`
       <span class="badge">${o.ready?'ORIGINAL':'SOON'}</span>
-      <div class="art">${o.icon}</div>
+      <div class="art">${art}</div>
       <div class="meta"><div class="t">${o.title}</div><div class="d">${o.desc}</div></div>`;
     if(o.ready){
       card.tabIndex=0;
@@ -582,15 +721,18 @@ function renderLibrary(){
 
   rows.forEach((r,di)=>{
     const {g,i}=r;
+    const cov=coverFor(g.url);
     const el=document.createElement('div');
     el.className='game'+(di===cursor?' sel':'')+(isFav(currentSystem,i)?' fav':'');
+    el.title=g.description||'';
     el.innerHTML=`
-      <span class="star" title="Favorite">${isFav(currentSystem,i)?'★':'☆'}</span>
-      <div class="info">
-        <div class="gt">${g.title}</div>
-        <div class="gd">${g.description||''}</div>
+      <div class="cover${cov?'':' noimg'}">
+        ${cov?`<img class="cover-img" loading="lazy" alt="" src="${cov}" onerror="this.closest('.cover').classList.add('noimg')">`:''}
+        <div class="cover-fallback"><span class="fi">${s.icon}</span></div>
+        <span class="star" title="Favorite">${isFav(currentSystem,i)?'★':'☆'}</span>
+        ${g.platform?`<span class="plat">${g.platform}</span>`:''}
       </div>
-      ${g.platform?`<span class="plat">${g.platform}</span>`:''}`;
+      <div class="info"><div class="gt">${g.title}</div></div>`;
     el.querySelector('.star').addEventListener('click',ev=>{ev.stopPropagation();toggleFav(currentSystem,i);});
     el.addEventListener('click',()=>launchFromDisplay(di));
     el.addEventListener('mouseenter',()=>{beep();cursor=di;syncSel();});
